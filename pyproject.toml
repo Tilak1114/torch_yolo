@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "torchyolo"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Tilak1114", email = "tilaksharma1114@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "numpy==1.26.4",
+  "Pillow==10.4.0",
+  "setuptools==68.2.2",
+  "torch==2.5.1",
+  "torchvision==0.20.1",
+  "transformers==4.44.2",
+  "pydantic==2.7.4",
+  "pytest==8.2.2",
+  "pandas", 
+  "ultralytics",
+  "plyfile",
+  "pytorch-lightning",
+]
+
+[project.urls]
+Documentation = "https://github.com/Tilak1114/torchyolo#readme"
+Issues = "https://github.com/Tilak1114/torchyolo/issues"
+Source = "https://github.com/Tilak1114/torchyolo"
+
+[tool.hatch.version]
+path = "torchyolo/__about__.py"
+
+[tool.hatch.envs.default]
+path = ".venv"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:torchyolo tests}"
+
+[tool.coverage.run]
+source_pkgs = ["torchyolo", "tests"]
+branch = true
+parallel = true
+omit = [
+  "torchyolo/__about__.py",
+]
+
+[tool.coverage.paths]
+torchyolo = ["torchyolo", "*/torchyolo/torchyolo"]
+tests = ["tests", "*/torchyolo/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
