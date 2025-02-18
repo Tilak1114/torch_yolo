@@ -1,0 +1,11 @@
+*.pt
+*.onnx
+*.yaml
+*.json
+*.csv
+*.png
+*.jpg
+
+/output
+/checkpoints
+/lightning_logs

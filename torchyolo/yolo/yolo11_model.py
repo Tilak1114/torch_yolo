@@ -59,7 +59,6 @@ from ultralytics.nn.modules import (
 )
 from copy import deepcopy
 from typing import Dict
-import numpy as np
 
 DEFAULT_NAME_MAPPING = {
     0: "person",

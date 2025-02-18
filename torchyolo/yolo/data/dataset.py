@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import yaml
 
+
 class YOLODataset(Dataset):
     def __init__(
         self, img_dir, labels_dir, imgsz=640, mask_ratio=0.4, overlap_mask=0.0, bgr=0.0
@@ -14,16 +15,19 @@ class YOLODataset(Dataset):
         self.img_path = img_dir
         self.labels_path = labels_dir
         self.imgsz = imgsz
-        
+
         # Filter to only keep images that have corresponding label files
         all_im_files = os.listdir(img_dir)
         self.label_files = set(os.listdir(labels_dir))
         self.im_files = [
-            f for f in all_im_files 
+            f
+            for f in all_im_files
             if os.path.splitext(f)[0] + ".txt" in self.label_files
         ]
-        
-        print(f"Found {len(self.im_files)} valid image-label pairs out of {len(all_im_files)} images")
+
+        print(
+            f"Found {len(self.im_files)} valid image-label pairs out of {len(all_im_files)} images"
+        )
         self.transforms = self.get_transforms(mask_ratio, overlap_mask, bgr)
 
     def get_transforms(self, mask_ratio=0.4, overlap_mask=0.0, bgr=0.0):

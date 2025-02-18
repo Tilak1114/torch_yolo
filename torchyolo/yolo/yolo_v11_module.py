@@ -1,5 +1,5 @@
 import pytorch_lightning as pl
-from .yolo11_model import YOLOv11Model
+from torchyolo.yolo.yolo11_model import YOLOv11Model
 import torch
 from torchyolo.yolo.loss import v8DetectionLoss
 from torch import nn, optim
@@ -590,3 +590,35 @@ class YOLOv11Module(pl.LightningModule):
         """Called when training starts."""
         # Store optimizer reference
         self.optimizer = self.trainer.optimizers[0]
+
+if __name__ == "__main__":
+    # Example usage of YOLOv11Module
+    module = YOLOv11Module(
+        ckpt_path="yolo11n.pt",
+        save_dir="./checkpoints/",
+        override_mapping={1: "box", 2: "pen"}
+    )
+    
+    # Create a sample batch for testing
+    sample_batch = {
+        "img": torch.rand(2, 3, 640, 640),  # 2 images, 3 channels, 640x640 resolution
+        "batch_idx": torch.tensor([0, 1]),
+        "cls": torch.tensor([[0], [1]]),  # Example class labels
+        "bboxes": torch.tensor([[[0.1, 0.1, 0.2, 0.2]], [[0.3, 0.3, 0.4, 0.4]]]),  # Example bounding boxes
+    }
+    
+    # Test forward pass
+    print("Testing forward pass...")
+    module.model.eval()
+    with torch.no_grad():
+        preds = module.model(sample_batch["img"])
+        print(f"Prediction shape: {preds[0].shape}")
+    
+    # Test loss calculation
+    print("\nTesting loss calculation...")
+    module.model.train()
+    loss, individual_losses = module.criterion(preds, sample_batch)
+    print(f"Total loss: {loss.item()}")
+    print(f"Individual losses (bbox, cls, dfl): {[l.item() for l in individual_losses]}")
+    
+    print("\nModel initialized and basic tests completed successfully!")
