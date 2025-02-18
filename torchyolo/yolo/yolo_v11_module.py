@@ -591,6 +591,68 @@ class YOLOv11Module(pl.LightningModule):
         # Store optimizer reference
         self.optimizer = self.trainer.optimizers[0]
 
+    def predict(self, image, conf_thres=0.25, iou_thres=0.7, device='cuda'):
+        """Perform inference on a single image.
+        
+        Args:
+            image (str | np.ndarray): Path to image file or numpy array
+            conf_thres (float): Confidence threshold for predictions (0-1)
+            iou_thres (float): NMS IoU threshold (0-1)
+            device (str): Device to run inference on ('cuda' or 'cpu')
+            
+        Returns:
+            Results: Object containing predictions (boxes, scores, classes)
+        """
+        # Ensure model is in eval mode
+        self.model.eval()
+        self.model.to(device)
+
+        # Load and preprocess image
+        if isinstance(image, str):
+            import cv2
+            image = cv2.imread(image)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Store original image for scaling coordinates later
+        orig_image = image.copy()
+        
+        # Prepare image tensor
+        import numpy as np
+        if isinstance(image, np.ndarray):
+            # Normalize and convert to tensor
+            image = torch.from_numpy(image).permute(2, 0, 1).float()  # HWC to CHW
+            image = image.to(device)
+            image = image.unsqueeze(0)  # Add batch dimension
+        
+        # Normalize
+        image = image / 255.0
+        
+        # Inference
+        with torch.no_grad():
+            preds = self.model(image)
+            
+            # Apply NMS
+            preds = ops.non_max_suppression(
+                preds,
+                conf_thres=conf_thres,
+                iou_thres=iou_thres,
+            )
+            
+            # Process predictions
+            if len(preds[0]):  # If there are detections
+                # Scale boxes to original image size
+                preds[0][:, :4] = ops.scale_boxes(image.shape[2:], preds[0][:, :4], orig_image.shape)
+            
+            # Create Results object
+            results = Results(
+                orig_img=orig_image,
+                path=None,
+                names=self.model.names,
+                boxes=preds[0]
+            )
+        
+        return results
+
 if __name__ == "__main__":
     # Example usage of YOLOv11Module
     module = YOLOv11Module(

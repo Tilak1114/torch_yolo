@@ -4,3 +4,4 @@
 /output
 /checkpoints
 /lightning_logs
+/wandb
