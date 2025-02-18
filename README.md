@@ -13,7 +13,7 @@
 ## Installation
 
 ```console
-pip install torch-yolo
+pip install torchyolo
 ```
 
 ## License
