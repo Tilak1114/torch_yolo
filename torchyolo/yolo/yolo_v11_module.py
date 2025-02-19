@@ -18,6 +18,7 @@ import math
 import numpy as np
 from typing import Dict
 
+
 class YOLOv11Module(pl.LightningModule):
     def __init__(
         self,
@@ -374,26 +375,41 @@ class YOLOv11Module(pl.LightningModule):
         self.save_model("final.pt")
         super().on_train_end()
 
-    def postprocess(self, preds):
-        """Apply Non-maximum suppression to prediction outputs."""
+    def postprocess(self, preds, conf_thres=0.2, iou_thres=0.7):
+        """Apply Non-maximum suppression to prediction outputs.
+
+        Args:
+            preds: Model predictions
+            conf_thres (float): Confidence threshold for detections (0-1)
+            iou_thres (float): NMS IoU threshold (0-1)
+        """
         return ops.non_max_suppression(
             preds,
-            conf_thres=0.001,
-            iou_thres=0.7,
+            conf_thres=conf_thres,
+            iou_thres=iou_thres,
             multi_label=True,
         )
 
-    def predict_postprocess(self, preds, img, orig_imgs, img_paths):
-        """Post-processes predictions and returns a list of Results objects."""
+    def predict_postprocess(
+        self, preds, img, orig_imgs, img_paths, conf_thres=0.2, iou_thres=0.7
+    ):
+        """Post-processes predictions and returns a list of Results objects.
+
+        Args:
+            preds: Model predictions
+            img: Input image tensor
+            orig_imgs: Original images
+            img_paths: Paths to input images
+            conf_thres (float): Confidence threshold for detections (0-1)
+            iou_thres (float): NMS IoU threshold (0-1)
+        """
         preds = ops.non_max_suppression(
             preds,
-            conf_thres=0.001,
-            iou_thres=0.7,
+            conf_thres=conf_thres,
+            iou_thres=iou_thres,
         )
 
-        if not isinstance(
-            orig_imgs, list
-        ):  # input images are a torch.Tensor, not a list
+        if not isinstance(orig_imgs, list):
             orig_imgs = ops.convert_torch2numpy_batch(orig_imgs)
 
         results = []
@@ -591,15 +607,15 @@ class YOLOv11Module(pl.LightningModule):
         # Store optimizer reference
         self.optimizer = self.trainer.optimizers[0]
 
-    def predict(self, image, conf_thres=0.25, iou_thres=0.7, device='cuda'):
+    def predict(self, image, conf_thres=0.25, iou_thres=0.7, device="cuda"):
         """Perform inference on a single image.
-        
+
         Args:
             image (str | np.ndarray): Path to image file or numpy array
             conf_thres (float): Confidence threshold for predictions (0-1)
             iou_thres (float): NMS IoU threshold (0-1)
             device (str): Device to run inference on ('cuda' or 'cpu')
-            
+
         Returns:
             Results: Object containing predictions (boxes, scores, classes)
         """
@@ -610,77 +626,83 @@ class YOLOv11Module(pl.LightningModule):
         # Load and preprocess image
         if isinstance(image, str):
             import cv2
+
             image = cv2.imread(image)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
+
         # Store original image for scaling coordinates later
         orig_image = image.copy()
-        
+
         # Prepare image tensor
         import numpy as np
+
         if isinstance(image, np.ndarray):
             # Normalize and convert to tensor
             image = torch.from_numpy(image).permute(2, 0, 1).float()  # HWC to CHW
             image = image.to(device)
             image = image.unsqueeze(0)  # Add batch dimension
-        
+
         # Normalize
         image = image / 255.0
-        
+
         # Inference
         with torch.no_grad():
             preds = self.model(image)
-            
+
             # Apply NMS
             preds = ops.non_max_suppression(
                 preds,
                 conf_thres=conf_thres,
                 iou_thres=iou_thres,
             )
-            
+
             # Process predictions
             if len(preds[0]):  # If there are detections
                 # Scale boxes to original image size
-                preds[0][:, :4] = ops.scale_boxes(image.shape[2:], preds[0][:, :4], orig_image.shape)
-            
+                preds[0][:, :4] = ops.scale_boxes(
+                    image.shape[2:], preds[0][:, :4], orig_image.shape
+                )
+
             # Create Results object
             results = Results(
-                orig_img=orig_image,
-                path=None,
-                names=self.model.names,
-                boxes=preds[0]
+                orig_img=orig_image, path=None, names=self.model.names, boxes=preds[0]
             )
-        
+
         return results
+
 
 if __name__ == "__main__":
     # Example usage of YOLOv11Module
     module = YOLOv11Module(
         ckpt_path="yolo11n.pt",
         save_dir="./checkpoints/",
-        override_mapping={1: "box", 2: "pen"}
+        override_mapping={1: "box", 2: "pen"},
     )
-    
+
     # Create a sample batch for testing
     sample_batch = {
         "img": torch.rand(2, 3, 640, 640),  # 2 images, 3 channels, 640x640 resolution
         "batch_idx": torch.tensor([0, 1]),
         "cls": torch.tensor([[0], [1]]),  # Example class labels
-        "bboxes": torch.tensor([[[0.1, 0.1, 0.2, 0.2]], [[0.3, 0.3, 0.4, 0.4]]]),  # Example bounding boxes
+        "bboxes": torch.tensor(
+            [[[0.1, 0.1, 0.2, 0.2]], [[0.3, 0.3, 0.4, 0.4]]]
+        ),  # Example bounding boxes
     }
-    
+
     # Test forward pass
     print("Testing forward pass...")
     module.model.eval()
     with torch.no_grad():
         preds = module.model(sample_batch["img"])
         print(f"Prediction shape: {preds[0].shape}")
-    
+
     # Test loss calculation
     print("\nTesting loss calculation...")
     module.model.train()
     loss, individual_losses = module.criterion(preds, sample_batch)
     print(f"Total loss: {loss.item()}")
-    print(f"Individual losses (bbox, cls, dfl): {[l.item() for l in individual_losses]}")
-    
+    print(
+        f"Individual losses (bbox, cls, dfl): {[l.item() for l in individual_losses]}"
+    )
+
     print("\nModel initialized and basic tests completed successfully!")
