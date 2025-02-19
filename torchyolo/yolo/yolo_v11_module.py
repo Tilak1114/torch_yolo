@@ -304,8 +304,7 @@ class YOLOv11Module(pl.LightningModule):
                     # Count predictions
                     for box in result.boxes:
                         class_name = self.model.names[int(box.cls)]
-                        if box.conf > 0.5:  # You can adjust this confidence threshold
-                            class_metrics[class_name]["tp"] += 1
+                        class_metrics[class_name]["tp"] += 1
 
                     # Count ground truth
                     true_class_counts = {}
@@ -321,7 +320,6 @@ class YOLOv11Module(pl.LightningModule):
                             1
                             for box in result.boxes
                             if self.model.names[int(box.cls)] == class_name
-                            and box.conf > 0.5
                         )
                         if pred_count > true_count:
                             class_metrics[class_name]["fp"] += pred_count - true_count
