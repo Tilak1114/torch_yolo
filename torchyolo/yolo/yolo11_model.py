@@ -166,10 +166,6 @@ class YOLOv11Model(nn.Module):
             orig_model, self.ckpt = self.attempt_load_one_weight(ckpt_path)
             self._initialize_basic_attributes(orig_model, ckpt_path)
 
-            # override manually
-            if not self.override_mapping:
-                self.override_mapping = DEFAULT_NAME_MAPPING
-
             self.names = (
                 self.override_mapping
                 if self.override_mapping
