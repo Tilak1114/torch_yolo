@@ -456,7 +456,14 @@ class YOLOv11Module(pl.LightningModule):
         torch.save(ckpt, save_path / filename)
         print(f"Saved checkpoint to {save_path / filename}")
 
-    def evaluate_dataloader(self, dataloader, save_prefix="", device="cuda"):
+    def evaluate_dataloader(
+        self,
+        dataloader,
+        save_prefix="",
+        device="cuda",
+        conf_thres=0.2,
+        iou_thres=0.7,
+    ):
         """Evaluate model on a dataloader and compute basic metrics.
 
         Args:
@@ -485,7 +492,12 @@ class YOLOv11Module(pl.LightningModule):
                 # Get predictions
                 preds = self.model(batch["img"])
                 results = self.predict_postprocess(
-                    preds, batch["img"], org_img, batch["img_path"]
+                    preds,
+                    batch["img"],
+                    org_img,
+                    batch["img_path"],
+                    conf_thres,
+                    iou_thres,
                 )
 
                 # Update metrics for each image in batch
@@ -526,7 +538,7 @@ class YOLOv11Module(pl.LightningModule):
 
         # Calculate and store metrics
         metrics_dict = {}
-        print(f"\n{save_prefix} Per-class metrics:")
+        print(f"\n{save_prefix} Per-class metrics at conf_thres={conf_thres} and iou_thres={iou_thres}:")
         print("Class            Precision    Recall    F1-Score")
         print("-" * 50)
 
@@ -550,6 +562,8 @@ class YOLOv11Module(pl.LightningModule):
                 "true_positives": int(tp),
                 "false_positives": int(fp),
                 "false_negatives": int(fn),
+                "conf_thres": conf_thres,
+                "iou_thres": iou_thres,
             }
 
             print(f"{class_name:<15} {precision:>9.3f} {recall:>9.3f} {f1:>9.3f}")
