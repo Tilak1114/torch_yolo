@@ -141,7 +141,13 @@ class YOLODataset(Dataset):
 
 
 class YOLODataModule(pl.LightningDataModule):
-    def __init__(self, dataset_yaml: str, batch_size: int = 16, imgsz: int = 640):
+    def __init__(
+        self,
+        dataset_yaml: str,
+        batch_size: int = 16,
+        imgsz: int = 640,
+        num_workers: int = 4,
+    ):
         super().__init__()
         # Read YAML file
         with open(dataset_yaml, "r") as f:
@@ -150,6 +156,7 @@ class YOLODataModule(pl.LightningDataModule):
         self.data_path = self.yaml_data["path"]
         self.batch_size = batch_size
         self.imgsz = imgsz
+        self.num_workers = num_workers
 
         self.train_dataset = None
         self.val_dataset = None
@@ -190,6 +197,7 @@ class YOLODataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 shuffle=True,
                 collate_fn=YOLODataset.collate_fn,
+                num_workers=self.num_workers,
             )
             if self.train_dataset
             else None
@@ -202,6 +210,7 @@ class YOLODataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 shuffle=False,
                 collate_fn=YOLODataset.collate_fn,
+                num_workers=self.num_workers,
             )
             if self.val_dataset
             else None
@@ -214,6 +223,7 @@ class YOLODataModule(pl.LightningDataModule):
                 batch_size=self.batch_size,
                 shuffle=False,
                 collate_fn=YOLODataset.collate_fn,
+                num_workers=self.num_workers,
             )
             if self.test_dataset
             else None
