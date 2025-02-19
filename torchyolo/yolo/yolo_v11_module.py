@@ -17,6 +17,7 @@ from tqdm import tqdm
 import math
 import numpy as np
 from typing import Dict
+import os
 
 
 class YOLOv11Module(pl.LightningModule):
@@ -44,6 +45,8 @@ class YOLOv11Module(pl.LightningModule):
         box_loss_weight: float = 7.5,  # box loss weight
         cls_loss_weight: float = 0.5,  # cls loss weight
         dfl_loss_weight: float = 1.5,  # dfl loss weight
+        # Profiler parameters
+        profiler_config: dict = None,
     ):
         super().__init__()
         self.model = YOLOv11Model(
@@ -77,6 +80,8 @@ class YOLOv11Module(pl.LightningModule):
         # Initialize tracking variables
         self.running_epoch = 0
         self.nb = 0  # Will store number of batches
+        self.profiler_enabled = profiler_config.get("enabled", False)
+        self.trace_path = profiler_config.get("trace_path", "./lightning_logs/profiler")
 
     def training_step(self, batch, batch_idx):
 
@@ -90,8 +95,26 @@ class YOLOv11Module(pl.LightningModule):
             batch[k] = batch[k].to(self.device)
 
         # Forward pass
-        preds = self.model(batch["img"])
-        loss, individual_losses = self.criterion(preds, batch)
+        if self.profiler_enabled and batch_idx < 5:  # Only profile first 25 batches
+            with torch.profiler.profile(
+                activities=[
+                    torch.profiler.ProfilerActivity.CPU,
+                    torch.profiler.ProfilerActivity.CUDA,
+                ],
+                schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
+                on_trace_ready=torch.profiler.tensorboard_trace_handler(
+                    self.trace_path
+                ),
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=True,
+            ) as profiler:
+                preds = self.model(batch["img"])
+                loss, individual_losses = self.criterion(preds, batch)
+                profiler.step()  # Move profiler forward
+        else:
+            preds = self.model(batch["img"])
+            loss, individual_losses = self.criterion(preds, batch)
 
         # Log losses with sync_dist=True
         bbox_loss, cls_loss, dfl_loss = individual_losses
@@ -195,8 +218,27 @@ class YOLOv11Module(pl.LightningModule):
         for k in ["batch_idx", "cls", "bboxes"]:
             batch[k] = batch[k].to(self.device)
 
-        preds = self.model(batch["img"])
-        val_loss, individual_losses = self.criterion(preds, batch)
+        if self.profiler_enabled and batch_idx < 5:
+            with torch.profiler.profile(
+                activities=[
+                    torch.profiler.ProfilerActivity.CPU,
+                    torch.profiler.ProfilerActivity.CUDA,
+                ],
+                schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+                on_trace_ready=torch.profiler.tensorboard_trace_handler(
+                    self.trace_path
+                ),
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=True,
+            ) as profiler:
+                preds = self.model(batch["img"])
+                val_loss, individual_losses = self.criterion(preds, batch)
+                profiler.step()
+        else:
+            preds = self.model(batch["img"])
+            val_loss, individual_losses = self.criterion(preds, batch)
+
         bbox_loss, cls_loss, dfl_loss = individual_losses
 
         self.log("val_bbox_loss", bbox_loss.item(), sync_dist=True)
@@ -538,7 +580,9 @@ class YOLOv11Module(pl.LightningModule):
 
         # Calculate and store metrics
         metrics_dict = {}
-        print(f"\n{save_prefix} Per-class metrics at conf_thres={conf_thres} and iou_thres={iou_thres}:")
+        print(
+            f"\n{save_prefix} Per-class metrics at conf_thres={conf_thres} and iou_thres={iou_thres}:"
+        )
         print("Class            Precision    Recall    F1-Score")
         print("-" * 50)
 
@@ -709,14 +753,5 @@ if __name__ == "__main__":
     with torch.no_grad():
         preds = module.model(sample_batch["img"])
         print(f"Prediction shape: {preds[0].shape}")
-
-    # Test loss calculation
-    print("\nTesting loss calculation...")
-    module.model.train()
-    loss, individual_losses = module.criterion(preds, sample_batch)
-    print(f"Total loss: {loss.item()}")
-    print(
-        f"Individual losses (bbox, cls, dfl): {[l.item() for l in individual_losses]}"
-    )
 
     print("\nModel initialized and basic tests completed successfully!")

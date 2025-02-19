@@ -21,11 +21,11 @@ class TrainingConfig:
 
     def __dict__(self):
         return {
-            'lightning_module': self.lightning_module,
-            'data_module': self.data_module,
-            'data_config': self.data_config,
-            'training_params': self.training_params,
-            'wandb_config': self.wandb_config,
+            "lightning_module": self.lightning_module,
+            "data_module": self.data_module,
+            "data_config": self.data_config,
+            "training_params": self.training_params,
+            "wandb_config": self.wandb_config,
         }
 
 
@@ -39,7 +39,7 @@ class Trainer:
     def train(self, config: TrainingConfig) -> Optional[str]:
         """
         Train the model and return the wandb run ID if logging is enabled
-        
+
         Args:
             config: TrainingConfig object containing:
                 - lightning_module: pl.LightningModule

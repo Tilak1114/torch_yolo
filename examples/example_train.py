@@ -23,6 +23,7 @@ def create_training_config(config: dict) -> TrainingConfig:
         save_dir=config["training_params"]["output_dir"],
         save_every=config["training_params"]["save_every"],
         freeze_backbone=config["training_params"]["freeze_backbone"],
+        profiler_config=config["profiler_config"],
     )
 
     return TrainingConfig(

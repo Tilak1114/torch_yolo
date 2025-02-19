@@ -2,22 +2,26 @@
     "training_params": {
         "pretrained_model_ckpt": "yolo11x.pt",
         "output_dir": "./output/sample_run",
-        "max_steps": 10,
+        "max_steps": 100,
         "learning_rate": 1e-4,
-        "save_every": 5,
-        "val_check_interval": 0.1,
+        "save_every": 100,
+        "val_check_interval": 0.2,
         "gpu": [
             1
         ],
         "freeze_backbone": true
     },
     "data_config": {
-        "batch_size": 32,
+        "batch_size": 2,
         "data_yaml_path": "sample_data/dataset.yaml"
     },
     "wandb_config": {
         "project": "torchyolo",
         "run_name": "sample_run",
         "should_log": false
+    },
+    "profiler_config": {
+        "enabled": true,
+        "trace_path": "./lightning_logs/trace_profiler"
     }
 }

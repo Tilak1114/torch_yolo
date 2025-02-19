@@ -37,6 +37,8 @@ dependencies = [
   "ultralytics",
   "plyfile",
   "pytorch-lightning",
+  "tensorboard",
+  "torch-tb-profiler",
 ]
 
 [project.urls]

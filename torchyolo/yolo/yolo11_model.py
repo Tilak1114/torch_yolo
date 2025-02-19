@@ -149,7 +149,7 @@ class YOLOv11Model(nn.Module):
         self,
         ckpt_path,
         freeze_backbone=False,
-        override_mapping: Dict[int, str] = DEFAULT_NAME_MAPPING,
+        override_mapping: Dict[int, str] = None,
     ):
         super().__init__()
         self.freeze_backbone = freeze_backbone
@@ -166,11 +166,12 @@ class YOLOv11Model(nn.Module):
             orig_model, self.ckpt = self.attempt_load_one_weight(ckpt_path)
             self._initialize_basic_attributes(orig_model, ckpt_path)
 
-            self.names = (
-                self.override_mapping
-                if self.override_mapping
-                else orig_model.yaml.get("names")
-            )
+            if self.override_mapping:
+                self.names = self.override_mapping
+            elif orig_model.yaml.get("names"):
+                self.names = orig_model.yaml.get("names")
+            else:
+                self.names = DEFAULT_NAME_MAPPING
 
             # Configure model architecture
             ch = self.model_cfg.get("ch", 3)
