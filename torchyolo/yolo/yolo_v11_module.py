@@ -17,6 +17,7 @@ from tqdm import tqdm
 import math
 import numpy as np
 from typing import Dict
+import cv2
 
 
 class YOLOv11Module(pl.LightningModule):
@@ -635,17 +636,17 @@ class YOLOv11Module(pl.LightningModule):
 
         # Load and preprocess image
         if isinstance(image, str):
-            import cv2
-
             image = cv2.imread(image)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Store original image for scaling coordinates later
         orig_image = image.copy()
+        orig_shape = image.shape[:2]  # (height, width)
+
+        # Resize image to 640x640
+        image = cv2.resize(image, (640, 640), interpolation=cv2.INTER_LINEAR)
 
         # Prepare image tensor
-        import numpy as np
-
         if isinstance(image, np.ndarray):
             # Normalize and convert to tensor
             image = torch.from_numpy(image).permute(2, 0, 1).float()  # HWC to CHW
@@ -668,9 +669,9 @@ class YOLOv11Module(pl.LightningModule):
 
             # Process predictions
             if len(preds[0]):  # If there are detections
-                # Scale boxes to original image size
+                # Scale boxes from 640x640 to original image size
                 preds[0][:, :4] = ops.scale_boxes(
-                    image.shape[2:], preds[0][:, :4], orig_image.shape
+                    (640, 640), preds[0][:, :4], orig_shape
                 )
 
             # Create Results object
